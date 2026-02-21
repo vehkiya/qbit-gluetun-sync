@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/qbit"
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/watcher"
@@ -31,23 +32,36 @@ func main() {
 	// Callback to sync port
 	syncPortFunc := func(port int) {
 		portMu.Lock()
+		defer portMu.Unlock()
+
 		if port == currentPort {
-			portMu.Unlock()
 			log.Printf("Port %d is already synced, skipping", port)
 			return
 		}
-		portMu.Unlock()
 
 		log.Printf("Syncing new port %d to qBitTorrent", port)
-		err := qbitClient.SetListenPort(port)
-		if err != nil {
-			log.Printf("Failed to set port: %v", err)
-		} else {
-			log.Printf("Successfully set port to %d", port)
-			portMu.Lock()
-			currentPort = port
-			portMu.Unlock()
+
+		var err error
+		maxRetries := 5
+		backoff := 1 * time.Second
+
+		for i := 0; i < maxRetries; i++ {
+			err = qbitClient.SetListenPort(port)
+			if err == nil {
+				log.Printf("Successfully set port to %d", port)
+				currentPort = port
+				return
+			}
+
+			log.Printf("Failed to set port (attempt %d/%d): %v", i+1, maxRetries, err)
+			if i < maxRetries-1 {
+				log.Printf("Retrying in %v...", backoff)
+				time.Sleep(backoff)
+				backoff *= 2
+			}
 		}
+
+		log.Printf("Exhausted all retries. Failed to sync port %d to qBitTorrent: %v", port, err)
 	}
 
 	// Do initial check in case file already exists
@@ -70,8 +84,15 @@ func main() {
 	mux := setupRouter(proxy, portFile, syncPortFunc)
 
 	log.Printf("Starting reverse proxy on :%s proxying to %s", listenPort, qbitAddr)
-	//nolint:gosec // Basic proxy server without strict timeout requirements
-	if err := http.ListenAndServe(":"+listenPort, mux); err != nil {
+	server := &http.Server{
+		Addr:              ":" + listenPort,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Proxy server failed: %v", err)
 	}
 }

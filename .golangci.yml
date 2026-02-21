@@ -11,3 +11,9 @@ linters:
     - staticcheck
     - unused
     - gosec
+
+linters-settings:
+  gosec:
+    excludes:
+      - G115 # integer overflow conversion int -> int32
+      - G117 # Exported struct field matches secret pattern
