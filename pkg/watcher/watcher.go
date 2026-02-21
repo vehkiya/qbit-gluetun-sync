@@ -2,13 +2,13 @@ package watcher
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/vehkiya/qbit-gluetun-sync/pkg/logger"
 )
 
 // WatchFile continuously watches a file's directory for CREATE or WRITE events
@@ -36,14 +36,14 @@ func WatchFile(filePath string, callback func(port int)) error {
 				}
 				// We care about CREATE or WRITE for our specific file
 				if (event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create) && event.Name == filePath {
-					log.Printf("Detected event on port file: %s", event.Op)
+					logger.Debug("Detected event on port file: %s", "op", event.Op.String())
 					handleFileChange(filePath, callback)
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Printf("Watcher error: %v", err)
+				logger.Error("Watcher error", "err", err)
 			}
 		}
 	}()
@@ -54,7 +54,7 @@ func WatchFile(filePath string, callback func(port int)) error {
 // CheckFileNow manually checks the file once, useful on startup.
 func CheckFileNow(filePath string, callback func(port int)) {
 	if _, err := os.Stat(filePath); err == nil {
-		log.Printf("Initial check: found port file")
+		logger.Debug("Initial check: found port file")
 		handleFileChange(filePath, callback)
 	}
 }
@@ -64,7 +64,7 @@ func handleFileChange(filePath string, callback func(port int)) {
 	//nolint:gosec // filePath is controlled by the environment and safe for read
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Printf("Failed to read port file: %v", err)
+		logger.Error("Failed to read port file", "err", err)
 		return
 	}
 
@@ -75,12 +75,12 @@ func handleFileChange(filePath string, callback func(port int)) {
 
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		log.Printf("Failed to parse port '%s': %v", portStr, err)
+		logger.Error("Failed to parse port", "port", portStr, "err", err)
 		return
 	}
 
 	if port <= 0 || port > 65535 {
-		log.Printf("Invalid port number: %d", port)
+		logger.Warn("Invalid port number", "port", port)
 		return
 	}
 
