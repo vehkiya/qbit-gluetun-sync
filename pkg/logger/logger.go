@@ -46,6 +46,11 @@ func Info(msg string, args ...any) {
 	getDefault().Info(msg, args...)
 }
 
+// Warn logs a warning message.
+func Warn(msg string, args ...any) {
+	getDefault().Warn(msg, args...)
+}
+
 // Error logs an error message.
 func Error(msg string, args ...any) {
 	getDefault().Error(msg, args...)
