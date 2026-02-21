@@ -1,0 +1,24 @@
+# Binaries
+qbit-gluetun-sync
+myapp
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace file
+go.work
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Temporary files
+/tmp/
+*.tmp
+*.bak
+*~
