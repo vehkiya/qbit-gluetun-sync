@@ -61,6 +61,7 @@ func CheckFileNow(filePath string, callback func(port int)) {
 
 // handleFileChange reads the file, parses the port, and executes the callback
 func handleFileChange(filePath string, callback func(port int)) {
+	//nolint:gosec // filePath is controlled by the environment and safe for read
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Printf("Failed to read port file: %v", err)
