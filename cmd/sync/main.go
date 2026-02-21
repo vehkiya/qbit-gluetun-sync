@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -9,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vehkiya/qbit-gluetun-sync/pkg/logger"
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/qbit"
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/watcher"
 )
@@ -19,6 +19,9 @@ var (
 )
 
 func main() {
+	logLevel := getEnv("LOG_LEVEL", "info")
+	logger.Init(logLevel)
+
 	// Parse environment variables
 	qbitAddr := getEnv("QBIT_ADDR", "http://localhost:8080")
 	qbitUser := getEnv("QBIT_USER", "")
@@ -35,11 +38,11 @@ func main() {
 		defer portMu.Unlock()
 
 		if port == currentPort {
-			log.Printf("Port %d is already synced, skipping", port)
+			logger.Debug("Port is already synced, skipping", "port", port)
 			return
 		}
 
-		log.Printf("Syncing new port %d to qBitTorrent", port)
+		logger.Info("Syncing new port to qBitTorrent", "port", port)
 
 		var err error
 		maxRetries := 5
@@ -48,42 +51,42 @@ func main() {
 		for i := 0; i < maxRetries; i++ {
 			err = qbitClient.SetListenPort(port)
 			if err == nil {
-				log.Printf("Successfully set port to %d", port)
+				logger.Info("Successfully set port", "port", port)
 				currentPort = port
 				return
 			}
 
-			log.Printf("Failed to set port (attempt %d/%d): %v", i+1, maxRetries, err)
+			logger.Warn("Failed to set port", "attempt", i+1, "maxRetries", maxRetries, "err", err)
 			if i < maxRetries-1 {
-				log.Printf("Retrying in %v...", backoff)
+				logger.Info("Retrying...", "backoff", backoff)
 				time.Sleep(backoff)
 				backoff *= 2
 			}
 		}
 
-		log.Printf("Exhausted all retries. Failed to sync port %d to qBitTorrent: %v", port, err)
+		logger.Error("Exhausted all retries. Failed to sync port to qBitTorrent", "port", port, "err", err)
 	}
 
 	// Do initial check in case file already exists
 	watcher.CheckFileNow(portFile, syncPortFunc)
 
 	// Start file watcher
-	log.Printf("Starting watcher for %s", portFile)
+	logger.Info("Starting watcher", "file", portFile)
 	err := watcher.WatchFile(portFile, syncPortFunc)
 	if err != nil {
-		log.Printf("Failed to start file watcher (will keep running without it): %v", err)
+		logger.Warn("Failed to start file watcher (will keep running without it)", "err", err)
 	}
 
 	// Setup Reverse Proxy
 	targetUrl, err := url.Parse(qbitAddr)
 	if err != nil {
-		log.Fatalf("Invalid QBIT_ADDR: %v", err)
+		logger.Fatal("Invalid QBIT_ADDR", "err", err)
 	}
 	proxy := httputil.NewSingleHostReverseProxy(targetUrl)
 
 	mux := setupRouter(proxy, portFile, syncPortFunc)
 
-	log.Printf("Starting reverse proxy on :%s proxying to %s", listenPort, qbitAddr)
+	logger.Info("Starting reverse proxy", "listenPort", listenPort, "qbitAddr", qbitAddr)
 	server := &http.Server{
 		Addr:              ":" + listenPort,
 		Handler:           mux,
@@ -93,7 +96,7 @@ func main() {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Proxy server failed: %v", err)
+		logger.Fatal("Proxy server failed", "err", err)
 	}
 }
 
@@ -102,15 +105,15 @@ func setupRouter(proxy *httputil.ReverseProxy, portFile string, syncPortFunc fun
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte("OK")); err != nil {
-			log.Printf("Failed to write healthz response: %v", err)
+			logger.Error("Failed to write healthz response", "err", err)
 		}
 	})
 	mux.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Manual sync requested")
+		logger.Info("Manual sync requested")
 		watcher.CheckFileNow(portFile, syncPortFunc)
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte("Sync triggered")); err != nil {
-			log.Printf("Failed to write sync response: %v", err)
+			logger.Error("Failed to write sync response", "err", err)
 		}
 	})
 	// Fallback to proxy
