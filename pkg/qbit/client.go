@@ -43,7 +43,12 @@ func (c *Client) authenticate() (string, error) {
 	data.Set("username", c.Username)
 	data.Set("password", c.Password)
 
-	req, err := http.NewRequest("POST", c.BaseURL+"/api/v2/auth/login", bytes.NewBufferString(data.Encode()))
+	loginURL, err := url.JoinPath(c.BaseURL, "/api/v2/auth/login")
+	if err != nil {
+		return "", fmt.Errorf("failed to join login URL: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", loginURL, bytes.NewBufferString(data.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("failed to create login request: %w", err)
 	}
@@ -87,7 +92,12 @@ func (c *Client) SetPreferences(preferences map[string]interface{}) error {
 	data := url.Values{}
 	data.Set("json", string(prefJSON))
 
-	req, err := http.NewRequest("POST", c.BaseURL+"/api/v2/app/setPreferences", bytes.NewBufferString(data.Encode()))
+	prefsURL, err := url.JoinPath(c.BaseURL, "/api/v2/app/setPreferences")
+	if err != nil {
+		return fmt.Errorf("failed to join setPreferences URL: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", prefsURL, bytes.NewBufferString(data.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed to create setPreferences request: %w", err)
 	}
