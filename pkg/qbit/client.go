@@ -31,7 +31,7 @@ func NewClient(baseURL, user, pass string) *Client {
 }
 
 // authenticate retrieves the auth cookie, if credentials are provided.
-// In many sidecar setups, auth bypass is configured for localhost, 
+// In many sidecar setups, auth bypass is configured for localhost,
 // so this might not always be needed, but we support it.
 func (c *Client) authenticate() (string, error) {
 	if c.Username == "" && c.Password == "" {
@@ -65,7 +65,7 @@ func (c *Client) authenticate() (string, error) {
 	}
 
 	// It's possible qBitTorrent returns an empty body ifauth is bypassed
-	// or no SID cookie is set if it was already authenticated somehow, 
+	// or no SID cookie is set if it was already authenticated somehow,
 	// but generally a successful login returns a SID cookie.
 	return "", nil
 }
@@ -90,7 +90,7 @@ func (c *Client) SetPreferences(preferences map[string]interface{}) error {
 		return fmt.Errorf("failed to create setPreferences request: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	
+
 	if cookie != "" {
 		req.AddCookie(&http.Cookie{Name: "SID", Value: cookie})
 	}
@@ -102,7 +102,10 @@ func (c *Client) SetPreferences(preferences map[string]interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("setPreferences failed with status: %d, and failed to read body: %w", resp.StatusCode, err)
+		}
 		return fmt.Errorf("setPreferences failed with status: %d, body: %s", resp.StatusCode, string(bodyBytes))
 	}
 
