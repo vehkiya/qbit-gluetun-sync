@@ -5,6 +5,14 @@
   ],
   "packageRules": [
     {
+      "matchPackageNames": [
+        "go",
+        "golang",
+        "docker.io/library/golang"
+      ],
+      "groupName": "Go"
+    },
+    {
       "matchUpdateTypes": [
         "minor",
         "patch",
