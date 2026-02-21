@@ -13,13 +13,14 @@ func TestWatchFile(t *testing.T) {
 	portFile := filepath.Join(tempDir, "forwarded_port")
 
 	// Create initial file
-	err := os.WriteFile(portFile, []byte("11111\n"), 0644)
+	err := os.WriteFile(portFile, []byte("11111\n"), 0600)
 	if err != nil {
 		t.Fatalf("failed to write initial file: %v", err)
 	}
 
 	var latestPort int32
 	callback := func(port int) {
+		//nolint:gosec // port numbers will never overflow int32
 		atomic.StoreInt32(&latestPort, int32(port))
 	}
 
@@ -42,7 +43,7 @@ func TestWatchFile(t *testing.T) {
 
 	// Simulate event
 	atomic.StoreInt32(&latestPort, 0)
-	err = os.WriteFile(portFile, []byte("22222\n"), 0644)
+	err = os.WriteFile(portFile, []byte("22222\n"), 0600)
 	if err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
@@ -55,7 +56,7 @@ func TestWatchFile(t *testing.T) {
 
 	// Simulator bad event
 	atomic.StoreInt32(&latestPort, 0)
-	err = os.WriteFile(portFile, []byte("invalid\n"), 0644)
+	err = os.WriteFile(portFile, []byte("invalid\n"), 0600)
 	if err != nil {
 		t.Fatalf("failed to write invalid file: %v", err)
 	}

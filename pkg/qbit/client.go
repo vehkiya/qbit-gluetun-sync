@@ -49,6 +49,7 @@ func (c *Client) authenticate() (string, error) {
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
+	//nolint:gosec // URL is internally constructed via config
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("login request failed: %w", err)
@@ -96,6 +97,7 @@ func (c *Client) SetPreferences(preferences map[string]interface{}) error {
 		req.AddCookie(&http.Cookie{Name: "SID", Value: cookie})
 	}
 
+	//nolint:gosec // URL is internally constructed via config
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("setPreferences request failed: %w", err)
