@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"testing"
 )
 
@@ -19,14 +18,14 @@ func TestHelperProcess(t *testing.T) {
 	// mock command output
 }
 
-// Ensure mockExecCommand can be used if ever needed
-func mockExecCommand(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestHelperProcess", "--", command}
-	cs = append(cs, args...)
-	cmd := exec.Command(os.Args[0], cs...)
-	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-	return cmd
-}
+// Ensure mockExecCommand can be used if ever needed (Commented out to appease 'unused' linter, but kept for TEMPLATE.md compliance logic)
+// func mockExecCommand(command string, args ...string) *exec.Cmd {
+// 	cs := []string{"-test.run=TestHelperProcess", "--", command}
+// 	cs = append(cs, args...)
+// 	cmd := exec.Command(os.Args[0], cs...)
+// 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+// 	return cmd
+// }
 
 func TestHealthCheck(t *testing.T) {
 	req, err := http.NewRequest("GET", "/healthz", nil)
@@ -35,12 +34,10 @@ func TestHealthCheck(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	})
+	// Test the real router setup
+	mux := setupRouter(nil, "/tmp/dummy", func(int) {})
 
-	handler.ServeHTTP(rr, req)
+	mux.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -52,7 +49,7 @@ func TestHealthCheck(t *testing.T) {
 }
 
 func TestGetEnv(t *testing.T) {
-	os.Setenv("TEST_ENV_VAR", "set_value")
+	_ = os.Setenv("TEST_ENV_VAR", "set_value")
 
 	val := getEnv("TEST_ENV_VAR", "default")
 	if val != "set_value" {

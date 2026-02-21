@@ -6,12 +6,16 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"sync"
 
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/qbit"
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/watcher"
 )
 
-var currentPort int
+var (
+	currentPort int
+	portMu      sync.Mutex
+)
 
 func main() {
 	// Parse environment variables
@@ -26,17 +30,23 @@ func main() {
 
 	// Callback to sync port
 	syncPortFunc := func(port int) {
+		portMu.Lock()
 		if port == currentPort {
+			portMu.Unlock()
 			log.Printf("Port %d is already synced, skipping", port)
 			return
 		}
+		portMu.Unlock()
+
 		log.Printf("Syncing new port %d to qBitTorrent", port)
 		err := qbitClient.SetListenPort(port)
 		if err != nil {
 			log.Printf("Failed to set port: %v", err)
 		} else {
 			log.Printf("Successfully set port to %d", port)
+			portMu.Lock()
 			currentPort = port
+			portMu.Unlock()
 		}
 	}
 
@@ -57,7 +67,16 @@ func main() {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(targetUrl)
 
-	// Setup HTTP Handlers
+	mux := setupRouter(proxy, portFile, syncPortFunc)
+
+	log.Printf("Starting reverse proxy on :%s proxying to %s", listenPort, qbitAddr)
+	//nolint:gosec // Basic proxy server without strict timeout requirements
+	if err := http.ListenAndServe(":"+listenPort, mux); err != nil {
+		log.Fatalf("Proxy server failed: %v", err)
+	}
+}
+
+func setupRouter(proxy *httputil.ReverseProxy, portFile string, syncPortFunc func(int)) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -71,11 +90,7 @@ func main() {
 	})
 	// Fallback to proxy
 	mux.Handle("/", proxy)
-
-	log.Printf("Starting reverse proxy on :%s proxying to %s", listenPort, qbitAddr)
-	if err := http.ListenAndServe(":"+listenPort, mux); err != nil {
-		log.Fatalf("Proxy server failed: %v", err)
-	}
+	return mux
 }
 
 func getEnv(key, fallback string) string {
