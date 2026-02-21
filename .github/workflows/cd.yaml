@@ -32,9 +32,8 @@ jobs:
               with:
                   change_path: "."
                   bump_each_commit: false
-                  tag_prefix: "v"
-                  major_pattern: "(MAJOR)|(BREAKING CHANGE)|(feat!:)"
-                  minor_pattern: "(MINOR)|(feat:)"
+                  major_pattern: "/!:|BREAKING CHANGE:/"
+                  minor_pattern: "/feat(\\(.+\\))?:/"
                   version_format: "${major}.${minor}.${patch}"
 
             - name: Set up Docker Buildx
