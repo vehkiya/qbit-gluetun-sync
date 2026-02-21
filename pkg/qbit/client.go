@@ -12,8 +12,9 @@ import (
 
 // Client handles communication with the qBitTorrent API.
 type Client struct {
-	BaseURL    string
-	Username   string
+	BaseURL  string
+	Username string
+	//nolint:gosec // Field name requires matching JSON payload
 	Password   string
 	HTTPClient *http.Client
 }
@@ -52,7 +53,7 @@ func (c *Client) authenticate() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("login request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("login failed with status: %d", resp.StatusCode)
@@ -99,7 +100,7 @@ func (c *Client) SetPreferences(preferences map[string]interface{}) error {
 	if err != nil {
 		return fmt.Errorf("setPreferences request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, err := io.ReadAll(resp.Body)

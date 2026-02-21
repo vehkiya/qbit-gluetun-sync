@@ -22,12 +22,12 @@ func WatchFile(filePath string, callback func(port int)) error {
 	dir := filepath.Dir(filePath)
 	err = watcher.Add(dir)
 	if err != nil {
-		watcher.Close()
+		_ = watcher.Close()
 		return fmt.Errorf("failed to watch directory %s: %w", dir, err)
 	}
 
 	go func() {
-		defer watcher.Close()
+		defer func() { _ = watcher.Close() }()
 		for {
 			select {
 			case event, ok := <-watcher.Events:
