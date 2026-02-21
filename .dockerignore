@@ -1,0 +1,11 @@
+.git
+.gitignore
+.dockerignore
+.golangci.yml
+renovate.json
+**/*.md
+**/*_test.go
+.github/
+.idea/
+.vscode/
+qbit-gluetun-sync
