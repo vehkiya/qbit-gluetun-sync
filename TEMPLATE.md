@@ -27,13 +27,16 @@ This repository follows a specific pattern for containerizing CLI tools by wrapp
 - **Version Management**: The `BW_CLI_VERSION` is defined as an `ARG` in the Dockerfile and extracted by CI for tagging.
 
 ### 4. CI/CD (GitHub Actions)
-- **PR Validation**:
+- **PR Validation** (Runs on `pull_request` and `push` to main branches):
     - Linting with `golangci-lint`.
     - Unit testing with `go test`.
+    - Builds the Docker image (without pushing).
     - Vulnerability scanning with `Trivy`.
-- **Build & Push**:
-    - Pushes to GitHub Container Registry (GHCR).
-    - Automates tagging based on the version extracted from the Dockerfile.
+- **CD / Release** (Runs manually on `workflow_dispatch`):
+    - Re-calculates Semantic Versioning dynamically from commits.
+    - Generates a Changelog mapping exactly 1-to-1 with merged commits (N commits = N changelog lines).
+    - Builds and pushes the final image to GitHub Container Registry (GHCR).
+    - Automates Git Tagging and creates a GitHub Release containing the generated changelog.
     - Generates build attestations and provenance.
 
 ## Key Files
