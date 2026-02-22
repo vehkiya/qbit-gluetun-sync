@@ -28,10 +28,14 @@ This project follows a specific architectural pattern for wrapping CLI tools in 
 - **Linting**: All changes must pass `golangci-lint` as configured in the CI pipeline.
 
 ### CI/CD Consistency
-- **Workflow Patterns**: Maintain separate workflows for `PR Validation` (test, build, scan) and `CD` (build, push, attest).
+- **Workflow Patterns**: Maintain separate workflows for `PR Validation` and `CD`.
+  - **PR Validation** (`pr.yaml`): Runs on `pull_request` and `push` to main branches to build, test, and scan the image without pushing to a registry.
+  - **CD / Release** (`cd.yaml`): Runs manually on `workflow_dispatch` to calculate semantic versioning, generate a changelog from merged commits, tag the release, and push the artifact to the registry.
 - **Vulnerability Scanning**: Use `Trivy` in the PR validation pipeline for OS and library-level scans.
-- **Version Management**: Extract versions from `Dockerfile` `ARG`s to drive tagging and release metadata.
-
+- **Version Management**:
+  - Dynamically calculate semantic versions from commits since the last tag.
+  - Generate a changelog exactly 1-to-1 with merged commits (1 merged commit = 1 changelog line).
+  - Use the generated changelog and calculated version to automatically publish a GitHub Release.
 ## 3. Style and Conventions
 - **Go Version**: Keep the Go version in `go.mod` and `Dockerfile` synchronized.
 - **Explicit Imports**: Group standard library imports separately from third-party ones.
