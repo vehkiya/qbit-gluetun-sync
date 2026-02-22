@@ -45,6 +45,9 @@ services:
       - SERVER_COUNTRIES=Netherlands
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_STATUS_FILE=/tmp/gluetun/forwarded_port
+      # This is an internal whitelist for the Gluetun container's firewall (iptables). 
+      # It tells Gluetun: "Allow incoming traffic on port 8080 from the local network."
+      - FIREWALL_INPUT_PORTS=8080,9090
     volumes:
       - gluetun_data:/tmp/gluetun
     ports:
@@ -89,6 +92,10 @@ spec:
           env:
             - name: VPN_PORT_FORWARDING_STATUS_FILE
               value: /tmp/gluetun/forwarded_port
+            # This is an internal whitelist for the Gluetun container's firewall (iptables). 
+            # It tells Gluetun: "Allow incoming traffic on port 8080 from the local network."
+            - name: FIREWALL_INPUT_PORTS
+              value: "8080,9090"
           volumeMounts:
             - name: gluetun-sync
               mountPath: /tmp/gluetun
