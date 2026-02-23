@@ -30,7 +30,7 @@ func main() {
 	qbitPass := getEnv("QBIT_PASS", "")
 	portFile := getEnv("PORT_FILE", "/tmp/gluetun/forwarded_port")
 	listenPort := getEnv("LISTEN_PORT", "9090")
-	allowedIPsStr := getEnv("ALLOWED_IPS", "127.0.0.1/32, ::1/128")
+	allowedIPsStr := getEnv("ALLOWED_IPS", "")
 
 	allowedIPs, err := netutil.ParseAllowedIPs(allowedIPsStr)
 	if err != nil {
