@@ -1,13 +1,13 @@
-# Gemini CLI Project Mandates: Go-Docker Proxy Wrapper
+# Gemini CLI Project Mandates: Go-Docker Port Sync Sidecar
 
-This project follows a specific architectural pattern for containerizing Go scripts and tools by wrapping them in a lightweight Go-based proxy. Adhere strictly to these mandates to maintain design consistency and security.
+This project follows a specific architectural pattern for containerizing event-driven Go scripts and tools, specifically functioning as a background sidecar. Adhere strictly to these mandates to maintain design consistency and security.
 
 ## 1. Architectural Mandates
 
 ### Go Entrypoint (`main.go`)
 - **Single Process Management**: The Go entrypoint must be the main process (`PID 1`).
-- **Proxy Layer**: Use `httputil.NewSingleHostReverseProxy` for all requests to the target service.
-- **Custom Handlers**: Add `/healthz` for readiness/liveness probes and other operational endpoints (like `/sync`) as needed.
+- **No Proxy Layer**: The application functions purely as a background sidecar, without intercepting or proxying traffic to the target service.
+- **Custom Handlers**: Add `/healthz` for readiness/liveness probes and other operational endpoints as needed.
 - **Event-Driven Tasks**: Implement background routines (e.g., watching a file for changes) to trigger actions instantly without heavy polling.
 - **Environment Variables**: Use `os.LookupEnv` or a similar pattern to handle environment-driven configuration with fallback defaults.
 
@@ -41,7 +41,7 @@ This project follows a specific architectural pattern for containerizing Go scri
 - **Go Version**: Keep the Go version in `go.mod` and `Dockerfile` synchronized.
 - **Explicit Imports**: Group standard library imports separately from third-party ones.
 - **Error Handling**: Wrap errors with context when bubble-up is necessary (e.g., `fmt.Errorf("context: %w", err)`).
-- **Minimalism**: Avoid adding libraries for functionality that can be achieved with the Go standard library (e.g., simple HTTP proxying, periodic tickers).
+- **Minimalism**: Avoid adding libraries for functionality that can be achieved with the Go standard library (e.g., simple HTTP servers, periodic tickers).
 
 ## 4. Security
 - **No Shell**: Do not include `sh`, `bash`, or other shells in the final image.
