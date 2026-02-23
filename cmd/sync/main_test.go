@@ -46,6 +46,18 @@ func TestHealthCheck(t *testing.T) {
 	if rr.Body.String() != "OK" {
 		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), "OK")
 	}
+
+	// Test non-GET request
+	reqPost, err := http.NewRequest("POST", "/healthz", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rrPost := httptest.NewRecorder()
+	mux.ServeHTTP(rrPost, reqPost)
+
+	if status := rrPost.Code; status != http.StatusMethodNotAllowed {
+		t.Errorf("handler returned wrong status code for POST: got %v want %v", status, http.StatusMethodNotAllowed)
+	}
 }
 
 func TestGetEnv(t *testing.T) {
