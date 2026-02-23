@@ -21,6 +21,11 @@ func ParseAllowedIPs(ips string) ([]*net.IPNet, error) {
 		if ipStr == "" {
 			continue
 		}
+
+		// Remove brackets if someone provided an IPv6 address in brackets (e.g. [::1] or [::1]/128)
+		ipStr = strings.ReplaceAll(ipStr, "[", "")
+		ipStr = strings.ReplaceAll(ipStr, "]", "")
+
 		// If it's a single IP without a mask, add /32 for IPv4 or /128 for IPv6
 		if !strings.Contains(ipStr, "/") {
 			ip := net.ParseIP(ipStr)
@@ -44,14 +49,20 @@ func ParseAllowedIPs(ips string) ([]*net.IPNet, error) {
 
 // IsAllowedIP checks if the given remote IP address string is within any of the allowed IP networks.
 func IsAllowedIP(allowedIPs []*net.IPNet, remoteAddr string) bool {
-	// If allowedIPs is nil or empty, access is allowed by default
+	// If allowedIPs is nil or empty, access is denied by default (fail-closed)
 	if len(allowedIPs) == 0 {
-		return true
+		return false
 	}
 
 	ipStr, _, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
-		ipStr = remoteAddr // Default to using the whole string in case there is no port
+		// If SplitHostPort fails, it's likely because the port is missing.
+		// The address might be a bare IP or a bracketed IPv6, e.g., `[::1]`.
+		ipStr = remoteAddr
+		// net.ParseIP doesn't handle brackets, so we need to trim them.
+		if len(ipStr) > 1 && ipStr[0] == '[' && ipStr[len(ipStr)-1] == ']' {
+			ipStr = ipStr[1 : len(ipStr)-1]
+		}
 	}
 
 	ip := net.ParseIP(ipStr)

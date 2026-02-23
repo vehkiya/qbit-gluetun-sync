@@ -15,11 +15,16 @@ func TestParseAllowedIPs(t *testing.T) {
 		wantErr  bool
 	}{
 		{"Empty string", "", 0, false},
+		{"Empty value (spaces)", "   ", 0, false},
+		{"Invalid value", "not-an-ip", 0, true},
 		{"Single IP IPv4", "192.168.1.1", 1, false},
 		{"Single IP IPv6", "2001:db8::1", 1, false},
+		{"Single IP IPv6 (bracketed)", "[2001:db8::1]", 1, false},
 		{"Single CIDR IPv4", "192.168.1.0/24", 1, false},
 		{"Single CIDR IPv6", "2001:db8::/32", 1, false},
 		{"Multiple distinct", "10.0.0.0/8, 172.16.0.0/12,192.168.0.0/16", 3, false},
+		{"Combo of IPv4, IPv6 and IPv6 bracketed", "192.168.1.1, 2001:db8::1, [fe80::1]", 3, false},
+		{"Trailing comma", "192.168.1.1,", 1, false},
 		{"With invalid", "10.0.0.0/8, invalid-ip", 0, true},
 		{"Invalid CIDR", "192.168.1.0/33", 0, true},
 	}
@@ -48,8 +53,8 @@ func TestIsAllowedIP(t *testing.T) {
 		remoteAddr string
 		expected   bool
 	}{
-		{"Empty allowlist allows all", nil, "8.8.8.8:1234", true},
-		{"Empty slice allows all", []*net.IPNet{}, "8.8.8.8:1234", true},
+		{"Empty allowlist denies all", nil, "8.8.8.8:1234", false},
+		{"Empty slice denies all", []*net.IPNet{}, "8.8.8.8:1234", false},
 		{"Allowed IPv4 subnet", allowedIPs, "192.168.1.50:5678", true},
 		{"Allowed specific IPv4", allowedIPs, "10.0.0.1:9090", true},
 		{"Allowed IPv6 subnet", allowedIPs, "[2001:db8::1]:1234", true},
@@ -59,6 +64,7 @@ func TestIsAllowedIP(t *testing.T) {
 		{"Invalid remote IP", allowedIPs, "invalid-ip", false},
 		{"Valid IPv4 without port", allowedIPs, "192.168.1.50", true},
 		{"Valid IPv6 without port", allowedIPs, "2001:db8::1", true},
+		{"Valid bracketed IPv6 without port", allowedIPs, "[2001:db8::1]", true},
 	}
 
 	for _, tt := range tests {
