@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -35,7 +36,7 @@ func TestHealthCheck(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	// Test the real router setup
-	mux := setupRouter(nil, "/tmp/dummy", func(int) {})
+	mux := setupRouter(nil, "/tmp/dummy", func(int) {}, []*net.IPNet{})
 
 	mux.ServeHTTP(rr, req)
 

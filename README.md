@@ -23,6 +23,7 @@ The application is entirely driven by Environment Variables.
 | `QBIT_PASS` | *(empty)* | Password for qBitTorrent. |
 | `PORT_FILE` | `/tmp/gluetun/forwarded_port` | Path to the port file created by Gluetun. |
 | `LISTEN_PORT` | `9090` | The port this proxy wrapper will listen on. |
+| `ALLOWED_IPS` | `127.0.0.1/32, ::1/128` | Comma-separated list of IPs or CIDRs allowed to access the proxy (e.g., `192.168.1.0/24, 10.0.0.1`). Set to empty to allow all incoming connections (NOT RECOMMENDED). |
 
 ## Usage
 
@@ -69,6 +70,10 @@ services:
       - QBIT_ADDR=http://localhost:8080
       - PORT_FILE=/tmp/gluetun/forwarded_port
       - LISTEN_PORT=9090
+      # By default, ALLOWED_IPS limits access to localhost.
+      # Because the proxy is exposed to the local network via the Gluetun container's port mapping (9090:9090),
+      # you MUST explicitly allow your local network's subnet to access the proxy.
+      - ALLOWED_IPS=127.0.0.1/32,192.168.1.0/24
     volumes:
       - gluetun_data:/tmp/gluetun:ro
 ```
@@ -107,6 +112,9 @@ spec:
         # 3. Sync Proxy Sidecar
         - name: qbit-sync
           image: ghcr.io/vehkiya/qbit-gluetun-sync:latest
+          env:
+            - name: ALLOWED_IPS
+              value: "127.0.0.1/32,10.0.0.0/8,192.168.0.0/16"
           ports:
             - containerPort: 9090
               name: webui
@@ -131,6 +139,13 @@ Additionally, we intercept the following endpoints for sidecar management:
 
 - `GET /healthz` - Returns `200 OK` if the proxy wrapper is running. Useful for Docker health checks and Kubernetes probes.
 - `GET /sync` - Manually triggers a read of the `PORT_FILE` and pushes it to qBitTorrent.
+
+> [!CAUTION]
+> **Do NOT configure `ALLOWED_IPS` to an empty string to open it to the Internet.**
+> This sidecar proxy is designed to run securely within a trusted internal LAN or inside a loopback-only environment. By default, it aggressively restricts access to `127.0.0.1/32, ::1/128`.
+> - If you intentionally wipe out `ALLOWED_IPS` to allow all IP addresses, you run the risk of unauthenticated attackers triggering continuous port syncs (DoS) against your qBitTorrent instance via the `/sync` endpoint.
+> - Furthermore, if your qBitTorrent relies on localhost authentication bypass (`WebUI\LocalHostAuth=false`), an empty `ALLOWED_IPS` will grant outsiders full, unauthenticated administrative access to your qBitTorrent WebUI, because the proxy connects to qBitTorrent entirely from localhost.
+> - **Always define your explicit trusted networks (e.g., `192.168.1.0/24`) to limit access appropriately.**
 
 ## Development
 

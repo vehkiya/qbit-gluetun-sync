@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/logger"
+	"github.com/vehkiya/qbit-gluetun-sync/pkg/netutil"
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/qbit"
 	"github.com/vehkiya/qbit-gluetun-sync/pkg/watcher"
 )
@@ -28,6 +30,12 @@ func main() {
 	qbitPass := getEnv("QBIT_PASS", "")
 	portFile := getEnv("PORT_FILE", "/tmp/gluetun/forwarded_port")
 	listenPort := getEnv("LISTEN_PORT", "9090")
+	allowedIPsStr := getEnv("ALLOWED_IPS", "127.0.0.1/32, ::1/128")
+
+	allowedIPs, err := netutil.ParseAllowedIPs(allowedIPsStr)
+	if err != nil {
+		logger.Fatal("Invalid ALLOWED_IPS configuration", "err", err)
+	}
 
 	// Initialize qBitTorrent Client
 	qbitClient := qbit.NewClient(qbitAddr, qbitUser, qbitPass)
@@ -72,8 +80,7 @@ func main() {
 
 	// Start file watcher
 	logger.Info("Starting watcher", "file", portFile)
-	err := watcher.WatchFile(portFile, syncPortFunc)
-	if err != nil {
+	if err := watcher.WatchFile(portFile, syncPortFunc); err != nil {
 		logger.Warn("Failed to start file watcher (will keep running without it)", "err", err)
 	}
 
@@ -84,7 +91,7 @@ func main() {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(targetUrl)
 
-	mux := setupRouter(proxy, portFile, syncPortFunc)
+	mux := setupRouter(proxy, portFile, syncPortFunc, allowedIPs)
 
 	logger.Info("Starting reverse proxy", "listenPort", listenPort, "qbitAddr", qbitAddr)
 	server := &http.Server{
@@ -100,15 +107,19 @@ func main() {
 	}
 }
 
-func setupRouter(proxy *httputil.ReverseProxy, portFile string, syncPortFunc func(int)) *http.ServeMux {
+func setupRouter(proxy *httputil.ReverseProxy, portFile string, syncPortFunc func(int), allowedIPs []*net.IPNet) *http.ServeMux {
 	mux := http.NewServeMux()
+
+	// Healthz is always allowed without IP restrictions (useful for k8s/docker probes)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte("OK")); err != nil {
 			logger.Error("Failed to write healthz response", "err", err)
 		}
 	})
-	mux.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
+
+	// Sync endpoint with IP restriction
+	syncHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("Manual sync requested")
 		watcher.CheckFileNow(portFile, syncPortFunc)
 		w.WriteHeader(http.StatusOK)
@@ -116,8 +127,13 @@ func setupRouter(proxy *httputil.ReverseProxy, portFile string, syncPortFunc fun
 			logger.Error("Failed to write sync response", "err", err)
 		}
 	})
-	// Fallback to proxy
-	mux.Handle("/", proxy)
+	mux.Handle("/sync", netutil.IPAllowlistMiddleware(allowedIPs, syncHandler))
+
+	// Fallback to proxy with IP restriction
+	if proxy != nil {
+		mux.Handle("/", netutil.IPAllowlistMiddleware(allowedIPs, proxy))
+	}
+
 	return mux
 }
 
