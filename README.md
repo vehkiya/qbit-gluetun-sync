@@ -23,7 +23,7 @@ The application is entirely driven by Environment Variables.
 | `QBIT_PASS` | *(empty)* | Password for qBitTorrent. |
 | `PORT_FILE` | `/tmp/gluetun/forwarded_port` | Path to the port file created by Gluetun. |
 | `LISTEN_PORT` | `9090` | The port this proxy wrapper will listen on. |
-| `ALLOWED_IPS` | `127.0.0.1/32, ::1/128` | Comma-separated list of IPs or CIDRs allowed to access the proxy (e.g., `192.168.1.0/24, 10.0.0.1`). To allow all incoming connections, set to `0.0.0.0/0,::/0` (NOT RECOMMENDED). |
+| `ALLOWED_IPS` | `""` (Empty default) | Comma-separated list of IPs or CIDRs allowed to access the proxy (e.g., `192.168.1.0/24, 10.0.0.1`). Defaults to empty (fail-closed, blocks everything). To allow all incoming connections, set to `0.0.0.0/0,::/0` (NOT RECOMMENDED). |
 
 ## Usage
 
@@ -70,9 +70,11 @@ services:
       - QBIT_ADDR=http://localhost:8080
       - PORT_FILE=/tmp/gluetun/forwarded_port
       - LISTEN_PORT=9090
-      # By default, ALLOWED_IPS limits access to localhost.
+      # By default, ALLOWED_IPS limits access to nothing (fail-closed).
       # Because the proxy is exposed to the local network via the Gluetun container's port mapping (9090:9090),
       # you MUST explicitly allow your local network's subnet to access the proxy.
+      # For Docker Compose, you typically want to allow traffic from your LAN (e.g. 192.168.1.0/24)
+      # and loopback (127.0.0.1/32) if testing locally.
       - ALLOWED_IPS=127.0.0.1/32,192.168.1.0/24
     volumes:
       - gluetun_data:/tmp/gluetun:ro
@@ -113,6 +115,9 @@ spec:
         - name: qbit-sync
           image: ghcr.io/vehkiya/qbit-gluetun-sync:latest
           env:
+            # By default, ALLOWED_IPS is empty and blocks all traffic.
+            # In Kubernetes, you typically want to allow traffic from your cluster Pod CIDR (e.g., 10.0.0.0/8),
+            # Service CIDR, or your local LAN depending on how your Ingress/Networking is configured.
             - name: ALLOWED_IPS
               value: "127.0.0.1/32,10.0.0.0/8,192.168.0.0/16"
           ports:
@@ -142,7 +147,7 @@ Additionally, we intercept the following endpoints for sidecar management:
 
 > [!CAUTION]
 > **Do NOT configure `ALLOWED_IPS` to `0.0.0.0/0,::/0` to open it to the Internet.**
-> This sidecar proxy is designed to run securely within a trusted internal LAN or inside a loopback-only environment. By default, it aggressively restricts access to `127.0.0.1/32, ::1/128`. An empty `ALLOWED_IPS` will securely fail-closed and deny all incoming traffic.
+> This sidecar proxy is designed to run securely within a trusted internal LAN or inside a loopback-only environment. By default, it aggressively restricts access to nothing (empty string default) to strictly fail-closed.
 > - If you intentionally allow all IP addresses (e.g., `0.0.0.0/0,::/0`), you run the risk of unauthenticated attackers triggering continuous port syncs (DoS) against your qBitTorrent instance via the `/sync` endpoint.
 > - Furthermore, if your qBitTorrent relies on localhost authentication bypass (`WebUI\LocalHostAuth=false`), allowing all IPs will grant outsiders full, unauthenticated administrative access to your qBitTorrent WebUI, because the proxy connects to qBitTorrent entirely from localhost.
 > - **Always define your explicit trusted networks (e.g., `192.168.1.0/24`) to limit access appropriately.**
