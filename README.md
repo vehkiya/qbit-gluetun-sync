@@ -3,9 +3,11 @@
 A lightweight, event-driven sidecar proxy written in Go to synchronize the dynamic forwarded port from Gluetun (ProtonVPN) to qBitTorrent.
 
 ## Introduction
-When using VPN providers like ProtonVPN with WireGuard through [Gluetun](https://github.com/qdm12/gluetun), the forwarded port changes dynamically. qBitTorrent needs to be updated with this new port to allow incoming connections. 
+
+When using VPN providers like ProtonVPN with WireGuard through [Gluetun](https://github.com/qdm12/gluetun), the forwarded port changes dynamically. qBitTorrent needs to be updated with this new port to allow incoming connections.
 
 Instead of relying on heavy polling shell scripts, this project provides a **Go-based sidecar** that:
+
 - Watches the `/tmp/gluetun/forwarded_port` file using `fsnotify` for instant, event-driven updates.
 - Automatically calls the qBitTorrent API (`/api/v2/app/setPreferences`) to update the listening port whenever Gluetun changes it.
 - Follows the single-process container security pattern (runs as `nonroot` inside a minimal Google `distroless` image).
@@ -15,13 +17,13 @@ Instead of relying on heavy polling shell scripts, this project provides a **Go-
 
 The application is entirely driven by Environment Variables.
 
-| Variable | Default | Description |
-| :--- | :--- | :--- |
-| `QBIT_ADDR` | `http://localhost:8080` | The actual address of your qBitTorrent Web UI. |
-| `QBIT_USER` | *(empty)* | Username for qBitTorrent (if authentication bypass is disabled). |
-| `QBIT_PASS` | *(empty)* | Password for qBitTorrent. |
-| `PORT_FILE` | `/tmp/gluetun/forwarded_port` | Path to the port file created by Gluetun. |
-| `LISTEN_PORT` | `9090` | The port this sidecar will listen on for health checks. |
+| Variable      | Default                       | Description                                                      |
+| :------------ | :---------------------------- | :--------------------------------------------------------------- |
+| `QBIT_ADDR`   | `http://localhost:8080`       | The actual address of your qBitTorrent Web UI.                   |
+| `QBIT_USER`   | _(empty)_                     | Username for qBitTorrent (if authentication bypass is disabled). |
+| `QBIT_PASS`   | _(empty)_                     | Password for qBitTorrent.                                        |
+| `PORT_FILE`   | `/tmp/gluetun/forwarded_port` | Path to the port file created by Gluetun.                        |
+| `LISTEN_PORT` | `9090`                        | The port this sidecar will listen on for health checks.          |
 
 ## Usage
 
@@ -30,7 +32,7 @@ The application is entirely driven by Environment Variables.
 In a compose file, you run `qbit-gluetun-sync` in the same network namespace as qBitTorrent, sharing the `/tmp/gluetun` volume.
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   gluetun:
@@ -44,7 +46,7 @@ services:
       - SERVER_COUNTRIES=Netherlands
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_STATUS_FILE=/tmp/gluetun/forwarded_port
-      # This is an internal whitelist for the Gluetun container's firewall (iptables). 
+      # This is an internal whitelist for the Gluetun container's firewall (iptables).
       # It tells Gluetun: "Allow incoming traffic on port 8080 from the local network."
       - FIREWALL_INPUT_PORTS=8080,9090
     volumes:
@@ -62,7 +64,7 @@ services:
       - qbit_downloads:/downloads
 
   sync-sidecar:
-    image: ghcr.io/vehkiya/qbit-gluetun-sync:latest
+    image: ghcr.io/hononeko/qbit-gluetun-sync:latest
     network_mode: "service:gluetun"
     environment:
       - QBIT_ADDR=http://localhost:8080
@@ -91,7 +93,7 @@ spec:
           env:
             - name: VPN_PORT_FORWARDING_STATUS_FILE
               value: /tmp/gluetun/forwarded_port
-            # This is an internal whitelist for the Gluetun container's firewall (iptables). 
+            # This is an internal whitelist for the Gluetun container's firewall (iptables).
             # It tells Gluetun: "Allow incoming traffic on port 8080 from the local network."
             - name: FIREWALL_INPUT_PORTS
               value: "8080,9090"
@@ -105,7 +107,7 @@ spec:
 
         # 3. Sync Sidecar
         - name: qbit-sync
-          image: ghcr.io/vehkiya/qbit-gluetun-sync:latest
+          image: ghcr.io/hononeko/qbit-gluetun-sync:latest
           ports:
             - containerPort: 9090
               name: healthz
@@ -131,7 +133,7 @@ spec:
 The project is built using Go completely natively. To develop locally:
 
 ```bash
-git clone https://github.com/vehkiya/qbit-gluetun-sync.git
+git clone https://github.com/hononeko/qbit-gluetun-sync.git
 cd qbit-gluetun-sync
 go test -v ./...
 go build -o qbit-gluetun-sync ./cmd/sync

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vehkiya/qbit-gluetun-sync/pkg/logger"
-	"github.com/vehkiya/qbit-gluetun-sync/pkg/qbit"
-	"github.com/vehkiya/qbit-gluetun-sync/pkg/watcher"
+	"github.com/hononeko/qbit-gluetun-sync/pkg/logger"
+	"github.com/hononeko/qbit-gluetun-sync/pkg/qbit"
+	"github.com/hononeko/qbit-gluetun-sync/pkg/watcher"
 )
 
 var (

@@ -1,4 +1,4 @@
-module github.com/vehkiya/qbit-gluetun-sync
+module github.com/hononeko/qbit-gluetun-sync
 
 go 1.26.0
 
