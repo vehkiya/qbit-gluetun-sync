@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/vehkiya/qbit-gluetun-sync/pkg/logger"
+	"github.com/hononeko/qbit-gluetun-sync/pkg/logger"
 )
 
 // WatchFile continuously watches a file's directory for CREATE or WRITE events
