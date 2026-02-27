@@ -1,5 +1,8 @@
 # qBit-Gluetun Sync Sidecar
 
+[![GitHub Release](https://img.shields.io/github/v/release/hononeko/qbit-gluetun-sync)](https://github.com/hononeko/qbit-gluetun-sync/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/hononeko/qbit-gluetun-sync/main.yml)](https://github.com/hononeko/qbit-gluetun-sync/actions/workflows/main.yml)
+
 A lightweight, event-driven sidecar proxy written in Go to synchronize the dynamic forwarded port from Gluetun (ProtonVPN) to qBitTorrent.
 
 ## Introduction
