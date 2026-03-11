@@ -31,6 +31,7 @@ func TestClient_SetListenPort(t *testing.T) {
 				return
 			}
 
+			r.Body = http.MaxBytesReader(w, r.Body, 1048576) // 1MB limit for testing
 			if err := r.ParseForm(); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
